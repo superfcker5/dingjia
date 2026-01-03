@@ -1,0 +1,5 @@
+{
+  "name": "智能定价",
+  "description": "AI-powered price calculator that parses natural language orders and extracts inventory data from image tables.",
+  "requestFramePermissions": []
+}
