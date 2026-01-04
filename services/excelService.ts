@@ -64,8 +64,8 @@ export const parseExcelFile = async (file: File): Promise<Product[]> => {
     const rawName = row[nameColIndex];
     if (!rawName) continue;
 
-    // Sanitize name: remove newlines/returns, trim
-    const name = rawName.toString().replace(/[\r\n]+/g, ' ').trim();
+    // Sanitize name: remove all whitespaces (spaces, tabs, newlines)
+    const name = rawName.toString().replace(/\s+/g, '');
 
     // Skip empty names or total rows
     if (name === '' || name.includes('总计')) continue;

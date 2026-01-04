@@ -36,16 +36,16 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
         setProducts(newProducts);
       } else {
         // Intelligent Merge Logic
-        // Fix for TypeScript error: "Spread types may only be created from object types"
-        // Explicitly type the map entries to prevent inferring (string | Product)[] which leads to Map<string | Product, string | Product>
+        // Normalize keys by removing all whitespace to match the new strict "no spaces" rule
         const productMap = new Map<string, Product>(
-          products.map(p => [p.name.trim(), p] as [string, Product])
+          products.map(p => [p.name.replace(/\s+/g, ''), p] as [string, Product])
         );
         let updatedCount = 0;
         let addedCount = 0;
 
         newProducts.forEach(newP => {
-          const nameKey = newP.name.trim();
+          // newP.name already has spaces removed by parseExcelFile
+          const nameKey = newP.name;
           if (productMap.has(nameKey)) {
             // Update existing: Keep ID, update prices
             const existing = productMap.get(nameKey)!;
@@ -94,7 +94,8 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
   const updateProduct = (id: string, field: string, value: any, subField?: 'box' | 'item') => {
     setProducts(products.map(p => {
       if (p.id !== id) return p;
-      if (field === 'name') return { ...p, name: value };
+      // Immediately strip spaces from name input
+      if (field === 'name') return { ...p, name: value.replace(/\s+/g, '') };
       
       // Update nested price
       if (subField) {

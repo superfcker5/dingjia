@@ -75,7 +75,7 @@ export const parseTableImage = async (
 
     return rawData.map((item: any) => ({
       id: crypto.randomUUID(),
-      name: item.name ? item.name.toString().replace(/[\r\n]+/g, ' ').trim() : 'Unknown Product',
+      name: item.name ? item.name.toString().replace(/\s+/g, '') : 'Unknown Product',
       prices: {
         purchase: { box: item.purchase_box || 0, item: item.purchase_item || 0 },
         wholesale: { box: item.wholesale_box || 0, item: item.wholesale_item || 0 },
