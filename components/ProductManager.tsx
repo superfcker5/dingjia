@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Product } from '../types';
-import { Upload, Trash2, Plus, FileSpreadsheet, Loader2, Save, FileType, Image as ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Plus, FileSpreadsheet, Loader2, FileType, FileDown } from 'lucide-react';
 import { parseExcelFile } from '../services/excelService';
-import { parseTableImage } from '../services/geminiService';
+import { utils, writeFile } from 'xlsx';
 
 interface ProductManagerProps {
   products: Product[];
@@ -10,7 +10,7 @@ interface ProductManagerProps {
   apiKey: string; 
 }
 
-const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, apiKey }) => {
+const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -20,20 +20,10 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, 
 
     setIsUploading(true);
     try {
-      let newProducts: Product[] = [];
-
-      // Determine parse method based on file type
-      if (file.type.includes('image')) {
-        if (!apiKey) {
-           throw new Error("请先在设置中配置 Gemini API Key 以使用图片识别功能。");
-        }
-        newProducts = await parseTableImage(file, apiKey);
-      } else {
-        newProducts = await parseExcelFile(file);
-      }
+      const newProducts = await parseExcelFile(file);
       
       if (newProducts.length === 0) {
-        alert("未找到有效商品数据，请检查文件内容。");
+        alert("未找到有效商品数据，请检查表格格式。");
         return;
       }
 
@@ -55,7 +45,8 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, 
         let addedCount = 0;
 
         newProducts.forEach(newP => {
-          const nameKey = newP.name.replace(/\s+/g, ''); // Ensure new name is also clean
+          // newP.name already has spaces removed by parseExcelFile
+          const nameKey = newP.name;
           if (productMap.has(nameKey)) {
             // Update existing: Keep ID, update prices
             const existing = productMap.get(nameKey)!;
@@ -81,6 +72,38 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, 
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "名称", 
+      "进货价/箱", "进货价/个", 
+      "批发价/箱", "批发价/个", 
+      "零售底价/箱", "零售底价/个", 
+      "零售价/箱", "零售价/个"
+    ];
+    
+    // Create worksheet
+    const ws = utils.aoa_to_sheet([
+        headers,
+        ["示例商品", 100, 10, 120, 12, 140, 15, 160, 18] // Example row
+    ]);
+
+    // Adjust column widths for better visibility
+    ws['!cols'] = [
+        { wch: 20 }, // Name
+        { wch: 12 }, { wch: 12 }, // Purchase
+        { wch: 12 }, { wch: 12 }, // Wholesale
+        { wch: 15 }, { wch: 15 }, // Floor
+        { wch: 12 }, { wch: 12 }  // Retail
+    ];
+    
+    // Create workbook
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "导入模板");
+    
+    // Write and download
+    writeFile(wb, "商品导入模板.xlsx");
   };
 
   const deleteProduct = (id: string) => {
@@ -132,25 +155,36 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, 
             <FileSpreadsheet className="text-emerald-600" />
             商品数据库
           </h2>
-          <p className="text-sm text-gray-500">管理商品及四个档位的价格 (支持箱/个)，支持 Excel 或图片导入</p>
+          <p className="text-sm text-gray-500">管理商品及四个档位的价格 (支持箱/个)，支持 Excel 导入</p>
         </div>
        
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleDownloadTemplate}
+            className="flex-1 sm:flex-none px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+            title="下载 Excel 导入模板"
+          >
+            <FileDown size={16} />
+            <span className="hidden sm:inline">下载模板</span>
+            <span className="sm:hidden">模板</span>
+          </button>
+
           <button
             onClick={addProduct}
             className="flex-1 sm:flex-none px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
             <Plus size={16} />
-            手动添加
+            <span className="hidden sm:inline">手动添加</span>
+            <span className="sm:hidden">添加</span>
           </button>
           
-          <div className="relative flex-1 sm:flex-none">
+          <div className="relative flex-1 sm:flex-none min-w-[100px]">
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileUpload}
               className="hidden"
-              accept=".xlsx, .xls, .jpg, .jpeg, .png, .webp"
+              accept=".xlsx, .xls"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -158,7 +192,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, 
               className="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-colors shadow-sm whitespace-nowrap"
             >
               {isUploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
-              {isUploading ? '解析中...' : '导入表格/图片'}
+              {isUploading ? '解析中...' : '导入表格'}
             </button>
           </div>
         </div>
@@ -202,7 +236,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, 
                   <div className="flex flex-col items-center gap-2">
                     <FileType size={48} className="text-gray-200" />
                     <p>暂无商品数据</p>
-                    <p className="text-xs text-gray-400">请上传 .xlsx 表格或图片价格表，需包含“名称”及价格信息</p>
+                    <p className="text-xs text-gray-400">点击左上角“下载模板”获取标准格式，或手动添加商品</p>
                   </div>
                 </td>
               </tr>
