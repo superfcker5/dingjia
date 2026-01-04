@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Product } from '../types';
-import { Upload, Trash2, Plus, FileSpreadsheet, Loader2, Save, FileType } from 'lucide-react';
+import { Upload, Trash2, Plus, FileSpreadsheet, Loader2, Save, FileType, Image as ImageIcon } from 'lucide-react';
 import { parseExcelFile } from '../services/excelService';
+import { parseTableImage } from '../services/geminiService';
 
 interface ProductManagerProps {
   products: Product[];
@@ -9,7 +10,7 @@ interface ProductManagerProps {
   apiKey: string; 
 }
 
-const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }) => {
+const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts, apiKey }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -19,10 +20,20 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
 
     setIsUploading(true);
     try {
-      const newProducts = await parseExcelFile(file);
+      let newProducts: Product[] = [];
+
+      // Determine parse method based on file type
+      if (file.type.includes('image')) {
+        if (!apiKey) {
+           throw new Error("请先在设置中配置 Gemini API Key 以使用图片识别功能。");
+        }
+        newProducts = await parseTableImage(file, apiKey);
+      } else {
+        newProducts = await parseExcelFile(file);
+      }
       
       if (newProducts.length === 0) {
-        alert("未找到有效商品数据，请检查表格格式。");
+        alert("未找到有效商品数据，请检查文件内容。");
         return;
       }
 
@@ -44,8 +55,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
         let addedCount = 0;
 
         newProducts.forEach(newP => {
-          // newP.name already has spaces removed by parseExcelFile
-          const nameKey = newP.name;
+          const nameKey = newP.name.replace(/\s+/g, ''); // Ensure new name is also clean
           if (productMap.has(nameKey)) {
             // Update existing: Keep ID, update prices
             const existing = productMap.get(nameKey)!;
@@ -122,7 +132,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
             <FileSpreadsheet className="text-emerald-600" />
             商品数据库
           </h2>
-          <p className="text-sm text-gray-500">管理商品及四个档位的价格 (支持箱/个)，支持 Excel 导入</p>
+          <p className="text-sm text-gray-500">管理商品及四个档位的价格 (支持箱/个)，支持 Excel 或图片导入</p>
         </div>
        
         <div className="flex gap-2 w-full sm:w-auto">
@@ -140,7 +150,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
               ref={fileInputRef}
               onChange={handleFileUpload}
               className="hidden"
-              accept=".xlsx, .xls"
+              accept=".xlsx, .xls, .jpg, .jpeg, .png, .webp"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -148,7 +158,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
               className="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-colors shadow-sm whitespace-nowrap"
             >
               {isUploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
-              {isUploading ? '解析中...' : '导入表格'}
+              {isUploading ? '解析中...' : '导入表格/图片'}
             </button>
           </div>
         </div>
@@ -192,7 +202,7 @@ const ProductManager: React.FC<ProductManagerProps> = ({ products, setProducts }
                   <div className="flex flex-col items-center gap-2">
                     <FileType size={48} className="text-gray-200" />
                     <p>暂无商品数据</p>
-                    <p className="text-xs text-gray-400">请上传 .xlsx 格式的价格表，需包含“名称”及“价格/箱”、“售价/个”列</p>
+                    <p className="text-xs text-gray-400">请上传 .xlsx 表格或图片价格表，需包含“名称”及价格信息</p>
                   </div>
                 </td>
               </tr>

@@ -250,13 +250,13 @@ const Calculator: React.FC<CalculatorProps> = ({ products, settings, onSettingsC
             <table className="w-full text-sm text-left table-fixed lg:table-auto">
               <thead className="text-xs text-gray-500 uppercase bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                 <tr>
-                  <th className="pl-2 pr-1 py-3 font-semibold w-auto">商品名称</th>
+                  <th className="pl-1 pr-1 py-3 font-semibold w-auto">商品名称</th>
                   <th className="px-0.5 py-3 font-semibold text-center w-12 sm:w-16">箱</th>
                   <th className="px-0.5 py-3 font-semibold text-center w-12 sm:w-16">个</th>
                   <th className="px-2 py-3 font-semibold text-right whitespace-nowrap hidden sm:table-cell sm:w-20">
                     单价
                   </th>
-                  <th className="pl-1 pr-2 py-3 font-semibold text-right whitespace-nowrap w-[4.5rem] sm:w-24">小计</th>
+                  <th className="pl-1 pr-2 py-3 font-semibold text-right whitespace-nowrap w-20 sm:w-24">小计</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -278,7 +278,7 @@ const Calculator: React.FC<CalculatorProps> = ({ products, settings, onSettingsC
 
                     return (
                       <tr key={item.productId + idx} className="hover:bg-gray-50 transition-colors">
-                        <td className="pl-2 pr-1 py-2 font-medium text-gray-900 text-xs sm:text-sm break-words whitespace-normal align-middle">
+                        <td className="pl-1 pr-1 py-2 font-medium text-gray-900 text-xs sm:text-sm break-words whitespace-normal align-middle leading-tight">
                           <div>
                             {product ? product.name : item.productName}
                             {!product && <span className="text-red-500 ml-1 text-[10px]">(已删除)</span>}
